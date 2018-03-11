@@ -216,6 +216,8 @@ class Lexer {
 		'/^false/' => 'T_BOOL',
 		'/^concat/' => 'T_CONCAT',
 
+		'/^import/' => 'T_IMPORT',
+
 		'/^[(]/' => 'T_LPAREN',
 		'/^[)]/' => 'T_RPAREN',
 		'/^[,]/' => 'T_SEPARATE',	
@@ -588,10 +590,6 @@ class Lexer {
 			$this->eat('T_MINUS');
 			return new UnaryOp($token['token'], $this->factor());
 		}
-		if ($token['token'] == 'T_CONCAT') {
-			$this->eat('T_CONCAT');
-			return new UnaryOp($token['token'], $this->factor());
-		}
 		if ($token['token'] == 'T_FLOAT') {
 			$this->eat('T_FLOAT');
 			return new Num($token);
@@ -638,7 +636,7 @@ class Lexer {
 
 	public function expression() {
 		$result = $this->term();
-		while (in_array($this->current_token['token'], array('T_PLUS','T_MINUS')) ){
+		while (in_array($this->current_token['token'], array('T_PLUS','T_MINUS','T_CONCAT')) ){
 			$operand = $this->current_token;
 			switch ($operand['token']) {
 				case 'T_PLUS':
@@ -646,6 +644,9 @@ class Lexer {
 					break;
 				case 'T_MINUS':
 					$this->eat('T_MINUS');
+					break;
+				case 'T_CONCAT':
+					$this->eat('T_CONCAT');
 					break;
 				default:
 					break;
@@ -757,7 +758,7 @@ class Interpreter {
 			return $this->visit($node->left) % $this->visit($node->right);
 		}
 		elseif ($node->op['token'] == 'T_CONCAT') {
-			#return $this->visit($node->left) .= $this->visit($node->right);
+			return $this->visit($node->left) . $this->visit($node->right);
 		}
 	}
 
@@ -890,7 +891,7 @@ class Interpreter {
 	}
 
 	public function visit_text($node) {
-		return $node->value;
+		return substr($node->value,1,-1);
 	}
 
 	public function visit_boolean($node) {
@@ -912,5 +913,8 @@ $interpreter->interpret('
 	x is 10;
 	/** This is another comment.
 	That transcends two lines. **/
-	say x;
+	y is "String";
+	z is x concat y;
+	say "<br>";
+	say z;
 ');

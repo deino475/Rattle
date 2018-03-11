@@ -152,6 +152,16 @@ class Text extends AST {
 	}
 }
 
+class Boolean extends AST {
+	public $token;
+	public $value;
+
+	public function __construct($token) {
+		$this->token = $token['token'];
+		$this->value = $token['match'];
+	}
+}
+
 class Variable extends AST {
 	public $token;
 	public $value;
@@ -180,8 +190,6 @@ class  ProcedureDo extends AST {
 	}
 } 
 
-
-
 ############################################
 #   Lexer and Parser                       #
 #                                          #
@@ -202,8 +210,9 @@ class Lexer {
 		'/^\//' => 'T_DIVIDE',
 		'/^modulus/' => 'T_MODULUS',
 		'/^[%]/' => 'T_MODULUS',
-		'/^true/' => 'T_TRUE',
-		'/^false/' => 'T_FALSE',
+		'/^true/' => 'T_BOOL',
+		'/^false/' => 'T_BOOL',
+		'/^concat/' => 'T_CONCAT',
 
 		'/^[(]/' => 'T_LPAREN',
 		'/^[)]/' => 'T_RPAREN',
@@ -241,6 +250,7 @@ class Lexer {
 		'/^or/' => 'T_OR',
 
 		'/^"(.*?)"/' => 'T_STRING',
+		'/^\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/' => 'T_COMMENT',
 		'/^[+-]?([0-9]*[.])?[0-9]+/' => 'T_FLOAT',
 		'/^[a-zA-Z][a-zA-Z0-9]*/' => 'T_NAME',
 		'/^\s+/' => 'T_WHITESPACE',
@@ -253,7 +263,7 @@ class Lexer {
 		while ($offset < strlen($source_code)) {
 			$result = $this->match($source_code, $offset);
 			if (isset($result)) {
-				if ($result['token'] != "T_WHITESPACE") {
+				if (!in_array($result, array('T_WHITESPACE','T_NEWLINE','T_COMMENT')){
 					array_push($tokens, $result);
 				}
 				$offset += strlen($result['match']);
@@ -576,6 +586,10 @@ class Lexer {
 			$this->eat('T_MINUS');
 			return new UnaryOp($token['token'], $this->factor());
 		}
+		if ($token['token'] == 'T_CONCAT') {
+			$this->eat('T_CONCAT');
+			return new UnaryOp($token['token'], $this->factor());
+		}
 		if ($token['token'] == 'T_FLOAT') {
 			$this->eat('T_FLOAT');
 			return new Num($token);
@@ -583,6 +597,11 @@ class Lexer {
 		if ($token['token'] == 'T_STRING') {
 			$this->eat('T_STRING');
 			return new Text($token);
+		}
+
+		if ($token['token'] == 'T_BOOL') {
+			$this->eat('T_BOOL');
+			return new Boolean($token);
 		}
 
 		elseif ($token['token'] == 'T_LPAREN') {
@@ -702,6 +721,9 @@ class Interpreter {
 		elseif ($node instanceof Text) {
 			return $this->visit_text($node);
 		}
+		elseif ($node instanceof Boolean) {
+			return $this->visit_boolean($node);
+		}
 		elseif ($node instanceof ProcedureDecl) {
 			return $this->visit_procedure_decl($node);
 		}
@@ -731,6 +753,9 @@ class Interpreter {
 		}
 		elseif ($node->op['token'] == 'T_MODULUS') {
 			return $this->visit($node->left) % $this->visit($node->right);
+		}
+		elseif ($node->op['token'] == 'T_CONCAT') {
+			return $this->visit($node->left) .= $this->visit($node->right);
 		}
 	}
 
@@ -764,7 +789,6 @@ class Interpreter {
 				return $this->visit($node->left) <= $this->visit($node->right);
 				break;
 			default:
-				# code...
 				break;
 		}
 	}
@@ -865,6 +889,13 @@ class Interpreter {
 
 	public function visit_text($node) {
 		return $node->value;
+	}
+
+	public function visit_boolean($node) {
+		if ($node->value = 'true') {
+			return True;
+		}
+		return False;
 	}
 
 	public function interpret($code) {

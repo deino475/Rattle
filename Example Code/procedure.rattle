@@ -1,0 +1,10 @@
+procedure addFive
+	x is x plus 5,
+	say "Added five to score"
+end procedure;
+
+x is 10;
+do addFive;
+do addFive;
+
+say x;

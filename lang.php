@@ -200,6 +200,8 @@ class Lexer {
 	public $current_token = null;
 	public $tokens = array();
 	protected $terminals = array(
+		'/^\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/' => 'T_COMMENT',
+
 		'/^plus/' => 'T_PLUS',
 		'/^[+]/' => 'T_PLUS',
 		'/^minus/' => 'T_MINUS',
@@ -250,7 +252,7 @@ class Lexer {
 		'/^or/' => 'T_OR',
 
 		'/^"(.*?)"/' => 'T_STRING',
-		'/^\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/' => 'T_COMMENT',
+		
 		'/^[+-]?([0-9]*[.])?[0-9]+/' => 'T_FLOAT',
 		'/^[a-zA-Z][a-zA-Z0-9]*/' => 'T_NAME',
 		'/^\s+/' => 'T_WHITESPACE',
@@ -263,7 +265,7 @@ class Lexer {
 		while ($offset < strlen($source_code)) {
 			$result = $this->match($source_code, $offset);
 			if (isset($result)) {
-				if (!in_array($result, array('T_WHITESPACE','T_NEWLINE','T_COMMENT')){
+				if (!in_array($result['token'], array('T_WHITESPACE','T_NEWLINE','T_COMMENT'))){
 					array_push($tokens, $result);
 				}
 				$offset += strlen($result['match']);
@@ -755,7 +757,7 @@ class Interpreter {
 			return $this->visit($node->left) % $this->visit($node->right);
 		}
 		elseif ($node->op['token'] == 'T_CONCAT') {
-			return $this->visit($node->left) .= $this->visit($node->right);
+			#return $this->visit($node->left) .= $this->visit($node->right);
 		}
 	}
 
@@ -905,12 +907,10 @@ class Interpreter {
 	}
 }
 $interpreter = new Interpreter;
-$interpreter->interpret('	
-	procedure addOne 
-		x is x plus 1,
-		say x
-	end procedure;
-	x is 2;
-	do addOne;
-	do addOne;
+$interpreter->interpret('
+	/** This is a comment. **/	
+	x is 10;
+	/** This is another comment.
+	That transcends two lines. **/
+	say x;
 ');

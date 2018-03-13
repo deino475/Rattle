@@ -182,6 +182,28 @@ class ProcedureDecl extends AST {
 	}
 }
 
+class FunctionDecl extends AST {
+	public $name;
+	public $parameters = array();
+	public $then;
+
+	public function __construct($name, $parameters, $then) {
+		$this->name = $name;
+		$this->parameters = $parameters;
+		$this->then = $then;
+	}
+}
+
+class StructDecl extends AST {
+	public $name;
+	public $parameters = array();
+
+	public function __construct($name, $parameters) {
+		$this->name = $name;
+		$this->parameters = $parameters;
+	}
+}
+
 class  ProcedureDo extends AST {
 	public $name;
 
@@ -189,6 +211,32 @@ class  ProcedureDo extends AST {
 		$this->name = $name;
 	}
 } 
+
+class FunctionDo extends AST {
+	public $name;
+	public $param_values = array();
+
+	public function __construct($name, $param_values) {
+		$this->name = $name;
+		$this->param_values = $param_values;
+	}
+}
+
+############################################
+#   Data Type Nodes                        #
+#                                          #
+#                                          #
+############################################
+
+class BasicStruct {
+	public $type;
+	public $values = array();
+
+	public function __construct($type, $values) {
+		$this->type = $type;
+		$this->values = $values;
+	}
+}
 
 ############################################
 #   Lexer and Parser                       #
@@ -201,7 +249,6 @@ class Lexer {
 	public $tokens = array();
 	protected $terminals = array(
 		'/^\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/' => 'T_COMMENT',
-
 		'/^plus/' => 'T_PLUS',
 		'/^[+]/' => 'T_PLUS',
 		'/^minus/' => 'T_MINUS',
@@ -215,14 +262,11 @@ class Lexer {
 		'/^true/' => 'T_BOOL',
 		'/^false/' => 'T_BOOL',
 		'/^concat/' => 'T_CONCAT',
-
 		'/^import/' => 'T_IMPORT',
-
 		'/^[(]/' => 'T_LPAREN',
 		'/^[)]/' => 'T_RPAREN',
 		'/^[,]/' => 'T_SEPARATE',	
-		'/^;/' => 'T_END',
-		
+		'/^;/' => 'T_END',		
 		'/^end if/' => 'T_END_IF',
 		'/^end else/' => 'T_END_ELSE',
 		'/^end for/' => 'T_END_FOR',
@@ -230,7 +274,7 @@ class Lexer {
 		'/^end unless/' => 'T_END_UNLESS',
 		'/^end until/' => 'T_END_UNTIL',
 		'/^end procedure/' => 'T_END_PROC',
-
+		'/^end function/' => 'T_END_FUNC',
 		'/^if/' => 'T_IF',
 		'/^else/' => 'T_ELSE',
 		'/^for/' => 'T_FOR',
@@ -240,21 +284,19 @@ class Lexer {
 		'/^then/' => 'T_THEN',
 		'/^say/' => 'T_ECHO',
 		'/^procedure/' => 'T_PROC',
+		'/^function/' => 'T_FUNC',
 		'/^do/' => 'T_DO',
 		'/^return/' => 'T_RETURN',
-
 		'/^greater or equals/' => 'T_GREATER_EQUALS',
 		'/^lesser or equals/' => 'T_LESS_EQUALS',
 		'/^greater/' => 'T_GREATER',
 		'/^lesser/' => 'T_LESS',
 		'/^equals/' => 'T_EQUALS',
-
 		'/^is/' => 'T_ASSIGN',
 		'/^and/' => 'T_AND',
 		'/^or/' => 'T_OR',
-
-		'/^"(.*?)"/' => 'T_STRING',
-		
+		'/^list/' => 'T_LIST',
+		'/^"(.*?)"/' => 'T_STRING',	
 		'/^[+-]?([0-9]*[.])?[0-9]+/' => 'T_FLOAT',
 		'/^[a-zA-Z][a-zA-Z0-9]*/' => 'T_NAME',
 		'/^\s+/' => 'T_WHITESPACE',
@@ -389,6 +431,9 @@ class Lexer {
 		elseif ($this->current_token['token'] == 'T_PROC') {
 			$node = $this->procedure();
 		}
+		elseif ($this->current_token['token'] == 'T_FUNC') {
+			$node = $this->function_statement();
+		}
 		elseif ($this->current_token['token'] == 'T_DO') {
 			$node = $this->do_statement();
 		}
@@ -422,6 +467,31 @@ class Lexer {
 		}
 		$this->eat('T_END_PROC');
 		$node = new ProcedureDecl($name, $then);
+		return $node;
+	}
+
+	public function function_statement() {
+		$this->eat('T_FUNC');
+		$name = $this->variable();
+		$this->eat('T_LPAREN');
+		$parameters = array();
+		while ($this->current_token['token'] != 'T_RPAREN') {
+			array_push($parameters, $this->variable);
+			while ($this->current_token['token'] == 'T_SEPARATE') {
+				$this->eat('T_SEPARATE');
+				array_push($parameters, $this->variable());
+			}
+		}
+		$this->eat('T_RPAREN');
+		$then = array($this->statement());
+		while ($this->current_token['token'] != 'T_END_FUNC') {
+			while ($this->current_token['token'] == 'T_SEPARATE') {
+				$this->eat('T_SEPARATE');
+				array_push($then, $this->statement());
+			}
+		}
+		$this->eat('T_END_FUNC');
+		$node = new FunctionDecl($name, $parameters, $then);
 		return $node;
 	}
 
@@ -610,6 +680,9 @@ class Lexer {
 			$this->eat('T_RPAREN');
 			return $result;
 		}
+		elseif ($token['token'] == 'T_DO') {
+			$this->eat('T_DO');
+		}
 		else {
 			$node = $this->variable();
 			return $node;
@@ -675,6 +748,8 @@ class Lexer {
 class Interpreter {
 	public $lexer;
 	public $global_space = array();
+	public $current_stack = 0;
+	public $var_space = array(array());
 	public $procedure_space = array();
 
 	public function __construct() {
@@ -729,6 +804,9 @@ class Interpreter {
 		}
 		elseif ($node instanceof ProcedureDecl) {
 			return $this->visit_procedure_decl($node);
+		}
+		elseif ($node instanceof FunctionDecl) {
+			return $this->visit_function_decl($node);
 		}
 		elseif ($node instanceof ProcedureDo) {
 			return $this->visit_procedure_do($node);
@@ -857,7 +935,7 @@ class Interpreter {
 
 	public function visit_assign($node) {
 		$var_name = $node->left->value;
-		$this->global_space[$var_name] = $this->visit($node->right);
+		$this->var_space[$this->current_stack][$var_name] = $this->visit($node->right);
 	}
 	
 	public function visit_procedure_decl($node) {
@@ -866,12 +944,20 @@ class Interpreter {
 		$this->procedure_space[$procedure_name->value] = $procedure;
 	}
 
+
+
 	public function visit_procedure_do($node) {
 		$procedures = $this->procedure_space[$node->name->value];
+		array_push($this->var_space, array());
+		$this->current_stack = $this->current_stack + 1;
 		foreach ($procedures as $procedure) {
 			$this->visit($procedure);
 		}
+		$this->current_stack = $this->current_stack - 1;
+		array_pop($this->var_space);
 		return null;
+		
+
 	}
 
 	public function visit_return_statement($node) {
@@ -879,11 +965,12 @@ class Interpreter {
 	}
 
 	public function visit_variable($node) {
-		if (isset($this->global_space[$node->value])) {
-			return $this->global_space[$node->value];
+		for ($i = sizeof($this->var_space) - 1; $i >= 0 ; $i--) { 
+			if (isset($this->var_space[$i][$node->value])) {
+				return $this->var_space[$i][$node->value];
+			}
 		}
 		throw new Exception("Name does not exist.", 1);
-		
 	}
 
 	public function visit_say($node) {
@@ -910,11 +997,17 @@ class Interpreter {
 $interpreter = new Interpreter;
 $interpreter->interpret('
 	/** This is a comment. **/	
+
+	procedure printHello
+		x is 5,
+		say x,
+		say "<br>"
+	end procedure;
+
 	x is 10;
-	/** This is another comment.
-	That transcends two lines. **/
-	y is "String";
-	z is x concat y;
+	say x;
 	say "<br>";
-	say z;
+	do printHello;
+	say x;
+
 ');

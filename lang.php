@@ -1,4 +1,10 @@
 <?php
+/**
+Lexer/Paser/Interpreter for the Rattle Programming Language
+Developed By Nile Dixon
+Version 0.1
+
+**/
 
 ############################################
 #   Abstract Syntax Tree Nodes             #
@@ -85,7 +91,6 @@ class ReturnStatement extends AST {
 		$this->return_value = $return_value;
 	}
 }
-
 
 class SayNode extends AST {
 	public $thing_to_say;
@@ -235,6 +240,17 @@ class BasicStruct {
 	public function __construct($type, $values) {
 		$this->type = $type;
 		$this->values = $values;
+	}
+}
+
+class ReturnObject {
+	public $value;
+	public function __construct($ret_val) {
+		$this->value = $ret_val;
+	}
+
+	public function get_value() {
+		return $this->value;
 	}
 }
 
@@ -811,6 +827,9 @@ class Interpreter {
 		elseif ($node instanceof ProcedureDo) {
 			return $this->visit_procedure_do($node);
 		}
+		elseif ($node instanceof FunctionDo) {
+			return $this->visit_function_do($node);
+		}
 		elseif ($node instanceof ReturnStatement) {
 			return $this->visit_return_statement($node);
 		}
@@ -838,6 +857,7 @@ class Interpreter {
 		elseif ($node->op['token'] == 'T_CONCAT') {
 			return $this->visit($node->left) . $this->visit($node->right);
 		}
+		return null;
 	}
 
 	public function visit_unaryop($node) {
@@ -847,6 +867,7 @@ class Interpreter {
 		elseif ($node->operation == 'T_MINUS') {
 			return - $this->visit($node->expression);
 		}
+		return null;
 	}
 
 	public function visit_relop($node) {
@@ -872,53 +893,82 @@ class Interpreter {
 			default:
 				break;
 		}
+		return null;
 	}
 
 	public function visit_cond($node) {
+		$result = null;
 		if ($this->visit($node->relation) == True) {
 			foreach ($node->then as $statement) {
-				$this->visit($statement);
+				$result = $this->visit($statement);
+				if ($result != null) {
+					return $result;
+				}
 			}
 		}
 		else {
 			foreach ($node->else as $statement) {
-				$this->visit($statement);
+				$result = $this->visit($statement);
+				if ($result != null) {
+					return $result;
+				}
 			}
 		}
+		return $result;
 	}
 
 	public function visit_unless($node) {
+		$result = null;
 		if ($this->visit($node->relation) == False) {
 			foreach ($node->then as $statement) {
-				$this->visit($statement);
+				$result = $this->visit($statement);
+				if ($result != null) {
+					return $result;
+				}
 			}
 		}
+		return $result;
 	}
 
 	public function visit_for($node) {
+		$result = null;
 		$this->visit($node->assignment);
 		while ($this->visit($node->condition) == True) {
 			foreach ($node->then as $statement) {
-				$this->visit($statement);
+				$result = $this->visit($statement);
+				if ($result != null) {
+					return $result;
+				}
 			}
 			$this->visit($node->operative_assignment);
 		}
+		return $result;
 	}
 
 	public function visit_while($node) {
+		$result = null;
 		while ($this->visit($node->relation) == True) {
 			foreach ($node->then as $statement) {
-				$this->visit($statement);
+				$result = $this->visit($statement);
+				if ($result != null) {
+					return $result;
+				}
 			}
 		}
+		return $result;
 	}
 
 	public function visit_until($node) {
+		$result = null;
 		while ($this->visit($node->relation) == False) {
 			foreach ($node->then as $statement) {
-				$this->visit($statement);
+				$result = $this->visit($statement);
+				if ($result != null) {
+					return $result;
+				}
 			}
 		}
+		return null;
 	}
 
 	public function visit_num($node) {
@@ -926,9 +976,14 @@ class Interpreter {
 	}
 
 	public function visit_compound($node) {
+		$result = null;
 		foreach ($node->children as $child) {
-			$this->visit($child);
+			$result = $this->visit($child);
+			if ($result != null && $result instanceof ReturnObject) {
+				return $result->get_value();
+			}
 		}
+		return $result;
 	}
 
 	public function visit_noop($node) {}
@@ -936,15 +991,15 @@ class Interpreter {
 	public function visit_assign($node) {
 		$var_name = $node->left->value;
 		$this->var_space[$this->current_stack][$var_name] = $this->visit($node->right);
+		return null;
 	}
 	
 	public function visit_procedure_decl($node) {
 		$procedure_name = $node->name;
 		$procedure = $node->then;
 		$this->procedure_space[$procedure_name->value] = $procedure;
+		return null;
 	}
-
-
 
 	public function visit_procedure_do($node) {
 		$procedures = $this->procedure_space[$node->name->value];
@@ -956,12 +1011,11 @@ class Interpreter {
 		$this->current_stack = $this->current_stack - 1;
 		array_pop($this->var_space);
 		return null;
-		
-
 	}
 
 	public function visit_return_statement($node) {
-		return $this->visit($node->return_value);
+		$x = $this->visit($node->return_value);
+		return new ReturnObject($x);
 	}
 
 	public function visit_variable($node) {
@@ -975,6 +1029,7 @@ class Interpreter {
 
 	public function visit_say($node) {
 		echo $this->visit($node->thing_to_say);
+		return null;
 	}
 
 	public function visit_text($node) {
@@ -996,18 +1051,11 @@ class Interpreter {
 }
 $interpreter = new Interpreter;
 $interpreter->interpret('
-	/** This is a comment. **/	
-
-	procedure printHello
-		x is 5,
-		say x,
-		say "<br>"
-	end procedure;
-
-	x is 10;
+	/** This is a comment. **/
+	x is 110;
 	say x;
-	say "<br>";
-	do printHello;
-	say x;
-
+	if x equals 110 then 
+		return 9
+	end if;
+	say 10;
 ');

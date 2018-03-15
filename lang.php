@@ -2,7 +2,7 @@
 /**
 Lexer/Paser/Interpreter for the Rattle Programming Language
 Developed By Nile Dixon
-Version 0.1
+Version 0.2
 
 **/
 
@@ -86,6 +86,10 @@ class ForStatement extends AST {
 		$this->operative_assignment = $operative_assignment;
 		$this->then = $then;
 	}
+}
+
+class ForEachStatement extends AST {
+
 }
 
 class ReturnStatement extends AST {
@@ -292,6 +296,7 @@ class Lexer {
 		'/^false/' => 'T_BOOL',
 		'/^concat/' => 'T_CONCAT',
 		'/^import/' => 'T_IMPORT',
+		'/^none/' => 'T_NULL',
 		'/^[(]/' => 'T_LPAREN',
 		'/^[)]/' => 'T_RPAREN',
 		'/^[,]/' => 'T_SEPARATE',	
@@ -318,10 +323,10 @@ class Lexer {
 		'/^struct/' => 'T_STRUCT',
 		'/^do/' => 'T_DO',
 		'/^return/' => 'T_RETURN',
-		'/^greater or equals/' => 'T_GREATER_EQUALS',
-		'/^lesser or equals/' => 'T_LESS_EQUALS',
-		'/^greater/' => 'T_GREATER',
-		'/^lesser/' => 'T_LESS',
+		'/^is greater than or equals/' => 'T_GREATER_EQUALS',
+		'/^is less than or equals/' => 'T_LESS_EQUALS',
+		'/^is greater than/' => 'T_GREATER',
+		'/^is less than/' => 'T_LESS',
 		'/^equals/' => 'T_EQUALS',
 		'/^is/' => 'T_ASSIGN',
 		'/^and/' => 'T_AND',
@@ -329,7 +334,7 @@ class Lexer {
 		'/^list/' => 'T_LIST',
 		'/^"(.*?)"/' => 'T_STRING',	
 		'/^[+-]?([0-9]*[.])?[0-9]+/' => 'T_FLOAT',
-		'/^[a-zA-Z][a-zA-Z0-9]*/' => 'T_NAME',
+		'/^[a-zA-Z][a-zA-Z0-9_]*/' => 'T_NAME',
 		'/^\s+/' => 'T_WHITESPACE',
 		'/^\n/' => 'T_NEWLINE'
 	);
@@ -1146,18 +1151,19 @@ class Interpreter {
 $interpreter = new Interpreter;
 $interpreter->interpret('
 	/** This is a comment. **/
-	function goToTheStore()
-		say "Hello world"
+	function go_to_the_store()
+		say "Hello world",
+		if 1 is less than 2 then
+			say "<br>Bring some eggs"
+		end if
 	end function;
 
 	function squared(x)
-		say x times x,
 		return x times x
 	end function;
 
-	do goToTheStore();
-	say "<br>";
-	x is do squared(10);
+	do go_to_the_store();
+	x is do squared(-10) plus do squared(11);
 	say "<br>";
 	say x;
 ');

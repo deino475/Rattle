@@ -184,16 +184,6 @@ class Variable extends AST {
 	}
 }
 
-class ProcedureDecl extends AST {
-	public $name;
-	public $then;
-
-	public function __construct($name, $then) {
-		$this->name = $name;
-		$this->then = $then;
-	}
-}
-
 class FunctionDecl extends AST {
 	public $name;
 	public $parameters = array();
@@ -213,14 +203,6 @@ class StructDecl extends AST {
 	public function __construct($name, $parameters) {
 		$this->name = $name;
 		$this->parameters = $parameters;
-	}
-}
-
-class  ProcedureDo extends AST {
-	public $name;
-
-	public function __construct($name) {
-		$this->name = $name;
 	}
 } 
 
@@ -307,7 +289,6 @@ class Lexer {
 		'/^end while/' => 'T_END_WHILE',
 		'/^end unless/' => 'T_END_UNLESS',
 		'/^end until/' => 'T_END_UNTIL',
-		'/^end procedure/' => 'T_END_PROC',
 		'/^end function/' => 'T_END_FUNC',
 		'/^end struct/' => 'T_END_STRUCT',
 		'/^if/' => 'T_IF',
@@ -318,7 +299,6 @@ class Lexer {
 		'/^until/' => 'T_UNTIL',	
 		'/^then/' => 'T_THEN',
 		'/^say/' => 'T_ECHO',
-		'/^procedure/' => 'T_PROC',
 		'/^function/' => 'T_FUNC',
 		'/^struct/' => 'T_STRUCT',
 		'/^do/' => 'T_DO',
@@ -331,6 +311,7 @@ class Lexer {
 		'/^is/' => 'T_ASSIGN',
 		'/^and/' => 'T_AND',
 		'/^or/' => 'T_OR',
+		'/^not/' => 'T_NOT',
 		'/^list/' => 'T_LIST',
 		'/^"(.*?)"/' => 'T_STRING',	
 		'/^[+-]?([0-9]*[.])?[0-9]+/' => 'T_FLOAT',
@@ -464,9 +445,6 @@ class Lexer {
 		elseif ($this->current_token['token'] == 'T_ECHO') {
 			$node = $this->say();
 		}
-		elseif ($this->current_token['token'] == 'T_PROC') {
-			$node = $this->procedure();
-		}
 		elseif ($this->current_token['token'] == 'T_FUNC') {
 			$node = $this->function_statement();
 		}
@@ -491,21 +469,6 @@ class Lexer {
 		$this->eat('T_ASSIGN');
 		$right = $this->expression();
 		$node = new Assign($left, $token, $right);
-		return $node;
-	}
-
-	public function procedure() {
-		$this->eat('T_PROC');
-		$name = $this->variable();
-		$then = array($this->statement());
-		while ($this->current_token['token'] != 'T_END_PROC') {
-			while ($this->current_token['token'] == 'T_SEPARATE') {
-				$this->eat('T_SEPARATE');
-				array_push($then, $this->statement());
-			}
-		}
-		$this->eat('T_END_PROC');
-		$node = new ProcedureDecl($name, $then);
 		return $node;
 	}
 
@@ -725,6 +688,10 @@ class Lexer {
 			$this->eat('T_MINUS');
 			return new UnaryOp($token['token'], $this->factor());
 		}
+		if ($token['token'] == 'T_NOT') {
+			$this->eat('T_NOT');
+			return new UnaryOp($token['token'], $this->factor());
+		}
 		if ($token['token'] == 'T_FLOAT') {
 			$this->eat('T_FLOAT');
 			return new Num($token);
@@ -819,7 +786,6 @@ class Interpreter {
 	public $lexer;
 	public $current_stack = 0;
 	public $var_space = array(array());
-	public $procedure_space = array();
 	public $function_space = array();
 	public $struct_space = array();
 
@@ -873,17 +839,11 @@ class Interpreter {
 		elseif ($node instanceof Boolean) {
 			return $this->visit_boolean($node);
 		}
-		elseif ($node instanceof ProcedureDecl) {
-			return $this->visit_procedure_decl($node);
-		}
 		elseif ($node instanceof FunctionDecl) {
 			return $this->visit_function_decl($node);
 		}
 		elseif ($node instanceof StructDecl) {
 			return $this->visit_struct_decl($node);
-		}
-		elseif ($node instanceof ProcedureDo) {
-			return $this->visit_procedure_do($node);
 		}
 		elseif ($node instanceof FunctionDo) {
 			return $this->visit_function_do($node);
@@ -924,6 +884,9 @@ class Interpreter {
 		}
 		elseif ($node->operation == 'T_MINUS') {
 			return - $this->visit($node->expression);
+		}
+		elseif ($node->operation == 'T_NOT') {
+			return !$this->visit($node->expression);
 		}
 		return null;
 	}
@@ -1051,13 +1014,6 @@ class Interpreter {
 		$this->var_space[$this->current_stack][$var_name] = $this->visit($node->right);
 		return null;
 	}
-	
-	public function visit_procedure_decl($node) {
-		$procedure_name = $node->name;
-		$procedure = $node->then;
-		$this->procedure_space[$procedure_name->value] = $procedure;
-		return null;
-	}
 
 	public function visit_function_decl($node) {
 		$function_name = $node->name;
@@ -1078,18 +1034,6 @@ class Interpreter {
 		$struct_name = $node->name;
 		$struct_type = $node->type;
 
-	}
-
-	public function visit_procedure_do($node) {
-		$procedures = $this->procedure_space[$node->name->value];
-		array_push($this->var_space, array());
-		$this->current_stack = $this->current_stack + 1;
-		foreach ($procedures as $procedure) {
-			$this->visit($procedure);
-		}
-		$this->current_stack = $this->current_stack - 1;
-		array_pop($this->var_space);
-		return null;
 	}
 
 	public function visit_function_do($node) {

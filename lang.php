@@ -526,7 +526,7 @@ class Lexer {
 		$this->eat('T_LPAREN');
 		$parameters = array();
 		while ($this->current_token['token'] != 'T_RPAREN') {
-			array_push($parameters, $this->variable);
+			array_push($parameters, $this->variable());
 			while ($this->current_token['token'] == 'T_SEPARATE') {
 				$this->eat('T_SEPARATE');
 				array_push($parameters, $this->variable());
@@ -558,7 +558,7 @@ class Lexer {
 			}
 		}
 		$this->eat('T_RPAREN');
-		$node = new FunctionDo($procedure_name, $function_params);
+		$node = new FunctionDo($function_name, $function_params);
 		return $node;
 	}
 
@@ -1051,9 +1051,9 @@ class Interpreter {
 
 	public function visit_function_decl($node) {
 		$function_name = $node->name;
-		$function_params = $node->params;
+		$function_params = $node->parameters;
 		$function_do = $node->then;
-		$this->function_space[$function_name] = new FunctionObject($function_params,$function_do);
+		$this->function_space[$function_name->value] = new FunctionObject($function_params,$function_do);
 		return null;
 	}
 
@@ -1083,7 +1083,17 @@ class Interpreter {
 	}
 
 	public function visit_function_do($node) {
-
+		$return_value = null;
+		$function_info = $this->function_space[$node->name->value];
+		array_push($this->var_space, array());
+		$this->current_stack = $this->current_stack + 1;
+		for ($i=0; $i < sizeof($function_info->params); $i++) { 
+			$param = $function_info->params[$i];
+			$value = $node->param_values[$i];
+			$this->var_space[$this->current_stack][$param->token['match']] = $this->visit($value);
+		}
+		$return_value = $this->visit($function_info->then);
+		return $return_value;
 	}
 
 	public function visit_return_statement($node) {
@@ -1118,8 +1128,8 @@ class Interpreter {
 
 	public function interpret($code) {
 		$tree = $this->lexer->run($code);
-		print_r($tree);
-		#$result = $this->visit($tree);
+		#print_r($tree);
+		$result = $this->visit($tree);
 	}
 }
 $interpreter = new Interpreter;
@@ -1128,4 +1138,11 @@ $interpreter->interpret('
 	function goToTheStore()
 		say "Hello world"
 	end function;
+
+	function squared(x)
+		say x times x
+	end function;
+
+	do goToTheStore();
+	do squared(10);
 ');

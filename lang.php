@@ -734,6 +734,11 @@ class Lexer {
 			return new Boolean($token);
 		}
 
+		if ($token['token'] == 'T_DO') {
+			$node = $this->do_statement();
+			return $node;
+		}
+
 		elseif ($token['token'] == 'T_LPAREN') {
 			$this->eat('T_LPAREN');
 			$result = $this->expression();
@@ -1093,6 +1098,8 @@ class Interpreter {
 			$this->var_space[$this->current_stack][$param->token['match']] = $this->visit($value);
 		}
 		$return_value = $this->visit($function_info->then);
+		$this->current_stack = $this->current_stack - 1;
+		array_pop($this->var_space);
 		return $return_value;
 	}
 
@@ -1126,6 +1133,10 @@ class Interpreter {
 		return False;
 	}
 
+	public function visit_import($node) {
+
+	}
+
 	public function interpret($code) {
 		$tree = $this->lexer->run($code);
 		#print_r($tree);
@@ -1140,9 +1151,13 @@ $interpreter->interpret('
 	end function;
 
 	function squared(x)
-		say x times x
+		say x times x,
+		return x times x
 	end function;
 
 	do goToTheStore();
-	do squared(10);
+	say "<br>";
+	x is do squared(10);
+	say "<br>";
+	say x;
 ');

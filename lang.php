@@ -228,6 +228,27 @@ class MakeStatement extends AST {
 	}
 }
 
+class GetStatement extends AST {
+	public $name;
+	public $value_to_fetch;
+
+	public function __construct($name,$value_to_fetch) {
+		$this->name = $name;
+		$this->value_to_fetch = $value_to_fetch;
+	}
+}
+
+class SetStatement extends AST {
+	public $param_name;
+	public $struct_name;
+	public $value;
+
+	public function __construct($param_name, $struct_name, $value) {
+		$this->param_name = $param_name;
+		$this->struct_name = $struct_name;
+		$this->value = $value;
+	}
+}
 ############################################
 #   Data Type Nodes                        #
 #                                          #
@@ -328,6 +349,9 @@ class Lexer {
 		'/^not/' => 'T_NOT',
 		'/^named/' => 'T_NAMED',
 		'/^list/' => 'T_LIST',
+		'/^from/' => 'T_FROM',
+		'/^set/' => 'T_SET',
+		'/^to/' => 'T_TO',
 		'/^\'(.*?)\'/' => 'T_STRING',	
 		'/^[+-]?([0-9]*[.])?[0-9]+/' => 'T_FLOAT',
 		'/^[a-zA-Z][a-zA-Z0-9_]*/' => 'T_NAME',
@@ -475,6 +499,9 @@ class Lexer {
 		elseif ($this->current_token['token'] == 'T_MAKE') {
 			$node = $this->make_statement();
 		}
+		elseif ($this->current_token['token'] == 'T_SET') {
+			$node = $this->set_statement();
+		}
 		else {
 			$node = $this->empty();
 		}
@@ -579,6 +606,15 @@ class Lexer {
 		$this->eat('T_NAMED');
 		$variable_name = $this->variable();
 		$node = new MakeStatement($struct_name, $params, $variable_name);
+		return $node;
+	}
+
+	public function set_statement() {
+		$this->eat('T_SET');
+		$variable = $this->variable();
+		$this->eat('T_TO');
+		$value = $this->expression();
+		$node = new SetStatement($variable->value_to_fetch, $variable->name, $value);
 		return $node;
 	}
 
@@ -721,8 +757,17 @@ class Lexer {
 	}
 
 	public function variable() {
-		$node = new Variable($this->current_token);
+		$value = $this->current_token;
 		$this->eat('T_NAME');
+		if ($this->current_token['token'] == 'T_FROM') {
+			$this->eat('T_FROM');
+			$struct_name = $this->current_token['match'];
+			$value_name = $value['match'];
+			$this->eat('T_NAME');
+			$node = new GetStatement($struct_name, $value_name);
+			return $node;
+		}
+		$node = new Variable($value);
 		return $node;
 	}
 
@@ -905,6 +950,12 @@ class Interpreter {
 		}
 		elseif ($node instanceof MakeStatement) {
 			return $this->visit_make_struct($node);
+		}
+		elseif ($node instanceof GetStatement) {
+			return $this->visit_get_statement($node);
+		}
+		elseif ($node instanceof SetStatement) {
+			return $this->visit_set_statement($node);
 		}
 		elseif ($node instanceof NoOp) {
 
@@ -1127,6 +1178,25 @@ class Interpreter {
 		throw new Exception("Name does not exist.", 1);
 	}
 
+	public function visit_get_statement($node) {
+		for ($i = sizeof($this->var_space) - 1; $i >= 0; $i--) { 
+			if (isset($this->var_space[$i][$node->name])) {
+				return $this->var_space[$i][$node->name]->values[$node->value_to_fetch];
+			}
+		}
+		throw new Exception("This struct does not exist.", 1);
+	}
+
+	public function visit_set_statement($node) {
+		for ($i = sizeof($this->var_space) - 1; $i >= 0; $i--)  {
+			if (isset($this->var_space[$i][$node->struct_name])) {
+				if (isset($this->var_space[$i][$node->struct_name]->values[$node->param_name])) {
+					$this->var_space[$i][$node->struct_name]->values[$node->param_name] = $this->visit($node->value);
+				}
+			}
+		}
+	}
+
 	public function visit_say($node) {
 		echo $this->visit($node->thing_to_say);
 		return null;
@@ -1153,6 +1223,7 @@ class Interpreter {
 
 	public function interpret($code) {
 		$tree = $this->lexer->run($code);
+		#print_r($tree);
 		$result = $this->visit($tree);
 	}
 }
@@ -1166,5 +1237,6 @@ $interpreter->interpret("
 	end struct;
 
 	make person with ('Nile Dixon',2017,'Sociology') named nile;
-	say 'Hi everyone';
+	set dateofbirth from nile to 1997;
+	say dateofbirth from nile;
 ");

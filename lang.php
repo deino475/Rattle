@@ -1143,6 +1143,10 @@ class Interpreter {
 		return False;
 	}
 
+	public function visit_null($node) {
+		return null;
+	}
+
 	public function visit_import($node) {
 
 	}

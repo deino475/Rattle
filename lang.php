@@ -216,6 +216,18 @@ class FunctionDo extends AST {
 	}
 }
 
+class MakeStatement extends AST {
+	public $struct_name;
+	public $params;
+	public $struct_type;
+
+	public function __construct($name,$params,$type) {
+		$this->struct_name = $name;
+		$this->params = $params;
+		$this->struct_type = $type;
+	}
+}
+
 ############################################
 #   Data Type Nodes                        #
 #                                          #
@@ -302,7 +314,9 @@ class Lexer {
 		'/^function/' => 'T_FUNC',
 		'/^struct/' => 'T_STRUCT',
 		'/^do/' => 'T_DO',
+		'/^make/' => 'T_MAKE',
 		'/^return/' => 'T_RETURN',
+		'/^with/' => 'T_WITH',
 		'/^is greater than or equals/' => 'T_GREATER_EQUALS',
 		'/^is less than or equals/' => 'T_LESS_EQUALS',
 		'/^is greater than/' => 'T_GREATER',
@@ -312,8 +326,9 @@ class Lexer {
 		'/^and/' => 'T_AND',
 		'/^or/' => 'T_OR',
 		'/^not/' => 'T_NOT',
+		'/^named/' => 'T_NAMED',
 		'/^list/' => 'T_LIST',
-		'/^"(.*?)"/' => 'T_STRING',	
+		'/^\'(.*?)\'/' => 'T_STRING',	
 		'/^[+-]?([0-9]*[.])?[0-9]+/' => 'T_FLOAT',
 		'/^[a-zA-Z][a-zA-Z0-9_]*/' => 'T_NAME',
 		'/^\s+/' => 'T_WHITESPACE',
@@ -457,6 +472,9 @@ class Lexer {
 		elseif ($this->current_token['token'] == 'T_RETURN') {
 			$node = $this->return_statement();
 		}
+		elseif ($this->current_token['token'] == 'T_MAKE') {
+			$node = $this->make_statement();
+		}
 		else {
 			$node = $this->empty();
 		}
@@ -477,7 +495,7 @@ class Lexer {
 		$name = $this->variable();
 		$params = array();
 		while ($this->current_token['token'] != 'T_END_STRUCT') {
-			array_push($params, $this->variable);
+			array_push($params, $this->variable());
 			while ($this->current_token['token'] == 'T_SEPARATE') {
 				$this->eat('T_SEPARATE');
 				array_push($params, $this->variable());
@@ -514,6 +532,21 @@ class Lexer {
 		return $node;
 	}
 
+	public function struct_statement() {
+		$this->eat('T_STRUCT');
+		$name = $this->variable();
+		$params = array($this->variable());
+		while ($this->current_token['token'] != 'T_END_STRUCT') {
+			while ($this->current_token['token'] == 'T_SEPARATE') {
+				$this->eat('T_SEPARATE');
+				array_push($params, $this->variable());
+			}
+		}
+		$this->eat('T_END_STRUCT');
+		$node = new StructDecl($name, $params);
+		return $node;
+	}
+
 	public function do_statement() {
 		$this->eat('T_DO');
 		$function_name = $this->variable();
@@ -527,6 +560,25 @@ class Lexer {
 		}
 		$this->eat('T_RPAREN');
 		$node = new FunctionDo($function_name, $function_params);
+		return $node;
+	}
+
+	public function make_statement() {
+		$this->eat('T_MAKE');
+		$struct_name = $this->variable();
+		$this->eat('T_WITH');
+		$this->eat('T_LPAREN');
+		$params = array($this->expression());
+		while ($this->current_token['token'] != 'T_RPAREN') {
+			while ($this->current_token['token'] == 'T_SEPARATE') {
+				$this->eat('T_SEPARATE');
+				array_push($params, $this->expression());
+			}
+		}
+		$this->eat('T_RPAREN');
+		$this->eat('T_NAMED');
+		$variable_name = $this->variable();
+		$node = new MakeStatement($struct_name, $params, $variable_name);
 		return $node;
 	}
 
@@ -851,6 +903,9 @@ class Interpreter {
 		elseif ($node instanceof ReturnStatement) {
 			return $this->visit_return_statement($node);
 		}
+		elseif ($node instanceof MakeStatement) {
+			return $this->visit_make_struct($node);
+		}
 		elseif ($node instanceof NoOp) {
 
 		}
@@ -1026,14 +1081,20 @@ class Interpreter {
 	public function visit_struct_decl($node) {
 		$struct_name = $node->name;
 		$params = $node->parameters;
-		$this->struct_space[$struct_name] = $params;
+		$this->struct_space[$struct_name->value] = $params;
 		return null;
 	}
 
 	public function visit_make_struct($node) {
-		$struct_name = $node->name;
-		$struct_type = $node->type;
-
+		$return_value = null;
+		$struct_params = $this->struct_space[$node->struct_name->value];
+		$assoc_array = array();
+		for ($i=0; $i < sizeof($struct_params); $i++) { 
+			$param = $struct_params[$i];
+			$assoc_array[$param->value] = $this->visit($node->params[$i]);
+		}
+		$this->var_space[$this->current_stack][$node->struct_type->value] = new BasicStruct($node->struct_name->value, $assoc_array);
+		return $return_value;
 	}
 
 	public function visit_function_do($node) {
@@ -1088,26 +1149,18 @@ class Interpreter {
 
 	public function interpret($code) {
 		$tree = $this->lexer->run($code);
-		#print_r($tree);
 		$result = $this->visit($tree);
 	}
 }
 $interpreter = new Interpreter;
-$interpreter->interpret('
+$interpreter->interpret("
 	/** This is a comment. **/
-	function go_to_the_store()
-		say "Hello world",
-		if 1 is less than 2 then
-			say "<br>Bring some eggs"
-		end if
-	end function;
+	struct person 
+		name,
+		dateofbirth,
+		major
+	end struct;
 
-	function squared(x)
-		return x times x
-	end function;
-
-	do go_to_the_store();
-	x is do squared(-10) plus do squared(11);
-	say "<br>";
-	say x;
-');
+	make person with ('Nile Dixon',2017,'Sociology') named nile;
+	say 'Hi everyone';
+");

@@ -360,7 +360,7 @@ class Lexer {
 		'/^from/' => 'T_FROM',
 		'/^set/' => 'T_SET',
 		'/^to/' => 'T_TO',
-		'/^\'(.*?)\'/' => 'T_STRING',	
+		'/^{{(.*?)}}/' => 'T_STRING',	
 		'/^[+-]?([0-9]*[.])?[0-9]+/' => 'T_FLOAT',
 		'/^[a-zA-Z][a-zA-Z0-9_]*/' => 'T_NAME',
 		'/^\s+/' => 'T_WHITESPACE',
@@ -370,11 +370,15 @@ class Lexer {
 	public function run($source_code) {
 		$tokens = array();
 		$offset = 0;
+		$current_line_num = 0;
 		while ($offset < strlen($source_code)) {
 			$result = $this->match($source_code, $offset);
 			if (isset($result)) {
 				if (!in_array($result['token'], array('T_WHITESPACE','T_NEWLINE','T_COMMENT'))){
 					array_push($tokens, $result);
+				}
+				if ($result['token'] == 'T_NEWLINE') {
+					$current_line_num += 1;
 				}
 				$offset += strlen($result['match']);
 			}	
@@ -393,7 +397,7 @@ class Lexer {
 				);
 			}
 		}
-		return null;
+		throw new Exception("Could not parse the following code: $current_str", 1);
 	}
 
 	public function advance() {
@@ -887,7 +891,8 @@ class Lexer {
 			$this->advance();
 		}
 		else {
-			echo "Couldn't find $token_type <br>";
+			$token_found = $this->current_token['token'];
+			throw new Exception("Couldn't find $token_type found $token_found instead.", 1);
 		}
 	}
 }
@@ -1225,7 +1230,7 @@ class Interpreter {
 	}
 
 	public function visit_text($node) {
-		return substr($node->value,1,-1);
+		return substr($node->value,2,-2);
 	}
 
 	public function visit_boolean($node) {
@@ -1240,10 +1245,10 @@ class Interpreter {
 	}
 
 	public function visit_import($node) {
-		$import_interpreter = new Interpreter;
+		$import_interpreter = new Lexer;
 		$name = $node->file_name->token['match']  . ".rattle";
 		$file_contents = file_get_contents($name);
-		$this_tree = $import_interpreter->lexer->run($file_contents);
+		$this_tree = $import_interpreter->run($file_contents);
 		$this_result = $this->visit($this_tree);
 		return null;
 	}
@@ -1253,9 +1258,3 @@ class Interpreter {
 		$result = $this->visit($tree);
 	}
 }
-$interpreter = new Interpreter;
-$interpreter->interpret("
-	/** This is a comment. **/
-	import math;
-	say do squared(10);
-");

@@ -249,6 +249,14 @@ class SetStatement extends AST {
 		$this->value = $value;
 	}
 }
+
+class ImportStatement extends AST {
+	public $file_name;
+
+	public function __construct($file_to_open){
+		$this->file_name = $file_to_open;
+	}
+}
 ############################################
 #   Data Type Nodes                        #
 #                                          #
@@ -502,6 +510,9 @@ class Lexer {
 		elseif ($this->current_token['token'] == 'T_SET') {
 			$node = $this->set_statement();
 		}
+		elseif ($this->current_token['token'] == 'T_IMPORT') {
+			$node = $this->import_statement();
+		}
 		else {
 			$node = $this->empty();
 		}
@@ -712,6 +723,13 @@ class Lexer {
 		return $node;
 	}
 
+	public function import_statement() {
+		$this->eat('T_IMPORT');
+		$file_to_open = $this->variable();
+		$node = new ImportStatement($file_to_open);
+		return $node;
+	}
+
 	public function return_statement() {
 		$this->eat('T_RETURN');
 		$part_one = $this->expression();
@@ -865,10 +883,11 @@ class Lexer {
 
 	public function eat($token_type) {
 		if ($this->current_token['token'] == $token_type) {
+			$token_match = $this->current_token['match'];
 			$this->advance();
 		}
 		else {
-			echo "Couldn't find $token_type";
+			echo "Couldn't find $token_type <br>";
 		}
 	}
 }
@@ -956,6 +975,9 @@ class Interpreter {
 		}
 		elseif ($node instanceof SetStatement) {
 			return $this->visit_set_statement($node);
+		}
+		elseif ($node instanceof ImportStatement) {
+			return $this->visit_import($node);
 		}
 		elseif ($node instanceof NoOp) {
 
@@ -1218,25 +1240,22 @@ class Interpreter {
 	}
 
 	public function visit_import($node) {
-
+		$import_interpreter = new Interpreter;
+		$name = $node->file_name->token['match']  . ".rattle";
+		$file_contents = file_get_contents($name);
+		$this_tree = $import_interpreter->lexer->run($file_contents);
+		$this_result = $this->visit($this_tree);
+		return null;
 	}
 
 	public function interpret($code) {
 		$tree = $this->lexer->run($code);
-		#print_r($tree);
 		$result = $this->visit($tree);
 	}
 }
 $interpreter = new Interpreter;
 $interpreter->interpret("
 	/** This is a comment. **/
-	struct person 
-		name,
-		dateofbirth,
-		major
-	end struct;
-
-	make person with ('Nile Dixon',2017,'Sociology') named nile;
-	set dateofbirth from nile to 1997;
-	say dateofbirth from nile;
+	import math;
+	say do squared(10);
 ");

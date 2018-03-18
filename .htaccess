@@ -1,0 +1,2 @@
+RewriteEngine on
+RewriteRule ^(.*).rattle$ parse.php?file=$1.rattle

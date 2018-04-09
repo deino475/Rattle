@@ -216,6 +216,16 @@ class FunctionDo extends AST {
 	}
 }
 
+class CallDo extends AST {
+	public $name;
+	public $param_values = array();
+
+	public function __construct($name, $param_values) {
+		$this->name = $name;
+		$this->param_values = $param_values;
+	}
+}
+
 class MakeStatement extends AST {
 	public $struct_name;
 	public $params;
@@ -257,6 +267,22 @@ class ImportStatement extends AST {
 		$this->file_name = $file_to_open;
 	}
 }
+
+class IncludeStatement extends AST {
+	public $file_name;
+
+	public function __construct($file_to_include) {
+		$this->file_name = $file_to_include;
+	}
+}
+
+class ListDecl extends AST {
+	public $params = array();
+
+	public function __construct($params) {
+		$this->params = $params;
+	}
+}
 ############################################
 #   Data Type Nodes                        #
 #                                          #
@@ -283,6 +309,15 @@ class FunctionObject {
 	}
 }
 
+class NodeObject {
+	public $value;
+	public $next;
+}
+
+class ListObject {
+	public $head;
+}
+
 class ReturnObject {
 	public $value;
 	public function __construct($ret_val) {
@@ -305,66 +340,63 @@ class Lexer {
 	public $tokens = array();
 	protected $terminals = array(
 		'/^\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/' => 'T_COMMENT',
-		'/^plus/' => 'T_PLUS',
 		'/^[+]/' => 'T_PLUS',
-		'/^minus/' => 'T_MINUS',
 		'/^[-]/' => 'T_MINUS',
-		'/^times/' => 'T_MULTIPLY',
 		'/^[*]/' => 'T_MULTIPLY',
-		'/^divided by/' => 'T_DIVIDE',
 		'/^\//' => 'T_DIVIDE',
-		'/^modulus/' => 'T_MODULUS',
 		'/^[%]/' => 'T_MODULUS',
-		'/^true/' => 'T_BOOL',
-		'/^false/' => 'T_BOOL',
-		'/^concat/' => 'T_CONCAT',
-		'/^import/' => 'T_IMPORT',
-		'/^none/' => 'T_NULL',
 		'/^[(]/' => 'T_LPAREN',
 		'/^[)]/' => 'T_RPAREN',
 		'/^[,]/' => 'T_SEPARATE',	
-		'/^;/' => 'T_END',		
-		'/^end if/' => 'T_END_IF',
-		'/^end else/' => 'T_END_ELSE',
-		'/^end for/' => 'T_END_FOR',
-		'/^end while/' => 'T_END_WHILE',
-		'/^end unless/' => 'T_END_UNLESS',
-		'/^end until/' => 'T_END_UNTIL',
-		'/^end function/' => 'T_END_FUNC',
-		'/^end struct/' => 'T_END_STRUCT',
-		'/^if/' => 'T_IF',
-		'/^else/' => 'T_ELSE',
-		'/^for/' => 'T_FOR',
-		'/^while/' => 'T_WHILE',
-		'/^unless/' => 'T_UNLESS',
-		'/^until/' => 'T_UNTIL',	
-		'/^then/' => 'T_THEN',
-		'/^say/' => 'T_ECHO',
-		'/^function/' => 'T_FUNC',
-		'/^struct/' => 'T_STRUCT',
-		'/^do/' => 'T_DO',
-		'/^make/' => 'T_MAKE',
-		'/^return/' => 'T_RETURN',
-		'/^with/' => 'T_WITH',
-		'/^is greater than or equals/' => 'T_GREATER_EQUALS',
-		'/^is less than or equals/' => 'T_LESS_EQUALS',
-		'/^is greater than/' => 'T_GREATER',
-		'/^is less than/' => 'T_LESS',
-		'/^equals/' => 'T_EQUALS',
-		'/^is/' => 'T_ASSIGN',
-		'/^and/' => 'T_AND',
-		'/^or/' => 'T_OR',
-		'/^not/' => 'T_NOT',
-		'/^named/' => 'T_NAMED',
-		'/^list/' => 'T_LIST',
-		'/^from/' => 'T_FROM',
-		'/^set/' => 'T_SET',
-		'/^to/' => 'T_TO',
-		'/^{{(.*?)}}/' => 'T_STRING',	
+		'/^;/' => 'T_END',
+		'/^!=/' => 'T_NOT_EQUALS',
+		'/^>=/' => 'T_GREATER_EQUALS',
+		'/^<=/' => 'T_LESS_EQUALS',
+		'/^>/' => 'T_GREATER',
+		'/^</' => 'T_LESS',
+		'/^=/' => 'T_EQUALS',
+		'/^{{(.*?)}}/s' => 'T_STRING',	
 		'/^[+-]?([0-9]*[.])?[0-9]+/' => 'T_FLOAT',
 		'/^[a-zA-Z][a-zA-Z0-9_]*/' => 'T_NAME',
 		'/^\s+/' => 'T_WHITESPACE',
 		'/^\n/' => 'T_NEWLINE'
+	);
+
+	public $reserved_words = array(
+		'plus' => 'T_PLUS',
+		'minus' => 'T_MINUS',
+		'times' => 'T_MULTIPLY',
+		'divided' => 'T_DIVIDE',
+		'modulus' => 'T_MODULUS',
+		'true' => 'T_BOOL',
+		'false' => 'T_BOOL',
+		'concat' => 'T_CONCAT',
+		'import' => 'T_IMPORT',
+		'include' => 'T_INCLUDE',
+		'none' => 'T_NULL',
+		'end' => 'T_END',
+		'if' => 'T_IF',
+		'else' => 'T_ELSE',
+		'then' => 'T_THEN',
+		'say' => 'T_ECHO',
+		'function' => 'T_FUNC',
+		'struct' => 'T_STRUCT',
+		'do' => 'T_DO',
+		'make' => 'T_MAKE',
+		'return' => 'T_RETURN',
+		'with' => 'T_WITH',
+		'is' => 'T_ASSIGN',
+		'and' => 'T_AND',
+		'or' => 'T_OR',
+		'not' => 'T_NOT',
+		'named' => 'T_NAMED',
+		'list' => 'T_LIST',
+		'stack' => 'T_STACK',
+		'dict' => 'T_DICT',
+		'from' => 'T_FROM',
+		'set' => 'T_SET',
+		'to' => 'T_TO',
+		'call' => 'T_CALL'
 	);
 
 	public function run($source_code) {
@@ -375,16 +407,26 @@ class Lexer {
 			$result = $this->match($source_code, $offset);
 			if (isset($result)) {
 				if (!in_array($result['token'], array('T_WHITESPACE','T_NEWLINE','T_COMMENT'))){
+					if ($result['token'] == "T_NAME") {
+						$result = $this->match_reserved($result);
+					}
 					array_push($tokens, $result);
-				}
-				if ($result['token'] == 'T_NEWLINE') {
-					$current_line_num += 1;
 				}
 				$offset += strlen($result['match']);
 			}	
 		}
 		$this->tokens = $tokens;
 		return $this->program();
+	}
+
+	public function match_reserved($result) {
+		if (array_key_exists($result['match'], $this->reserved_words)) {
+			return array(
+				'match' => $result['match'],
+				'token' => $this->reserved_words[$result['match']],
+			);
+		}
+		return $result;
 	}
 
 	public function match($line, $offset) {
@@ -502,6 +544,9 @@ class Lexer {
 		elseif ($this->current_token['token'] == 'T_DO') {
 			$node = $this->do_statement();
 		}
+		elseif ($this->current_token['token'] == 'T_CALL') {
+			$node = $this->call_statement();
+		}
 		elseif ($this->current_token['token'] == 'T_STRUCT') {
 			$node = $this->struct_decl();
 		}
@@ -516,6 +561,9 @@ class Lexer {
 		}
 		elseif ($this->current_token['token'] == 'T_IMPORT') {
 			$node = $this->import_statement();
+		}
+		elseif ($this->current_token['token'] == 'T_INCLUDE') {
+			$node = $this->include_statement();
 		}
 		else {
 			$node = $this->empty();
@@ -536,14 +584,14 @@ class Lexer {
 		$this->eat('T_STRUCT');
 		$name = $this->variable();
 		$params = array();
-		while ($this->current_token['token'] != 'T_END_STRUCT') {
+		while ($this->current_token['token'] != 'T_END') {
 			array_push($params, $this->variable());
 			while ($this->current_token['token'] == 'T_SEPARATE') {
 				$this->eat('T_SEPARATE');
 				array_push($params, $this->variable());
 			}
 		}
-		$this->eat('T_END_STRUCT');
+		$this->eat('T_END');
 		$node = new StructDecl($name, $params);
 		return $node;
 	}
@@ -562,13 +610,13 @@ class Lexer {
 		}
 		$this->eat('T_RPAREN');
 		$then = array($this->statement());
-		while ($this->current_token['token'] != 'T_END_FUNC') {
+		while ($this->current_token['token'] != 'T_END') {
 			while ($this->current_token['token'] == 'T_SEPARATE') {
 				$this->eat('T_SEPARATE');
 				array_push($then, $this->statement());
 			}
 		}
-		$this->eat('T_END_FUNC');
+		$this->eat('T_END');
 		$compound = new Compound($then);
 		$node = new FunctionDecl($name, $parameters, $compound);
 		return $node;
@@ -578,13 +626,13 @@ class Lexer {
 		$this->eat('T_STRUCT');
 		$name = $this->variable();
 		$params = array($this->variable());
-		while ($this->current_token['token'] != 'T_END_STRUCT') {
+		while ($this->current_token['token'] != 'T_END') {
 			while ($this->current_token['token'] == 'T_SEPARATE') {
 				$this->eat('T_SEPARATE');
 				array_push($params, $this->variable());
 			}
 		}
-		$this->eat('T_END_STRUCT');
+		$this->eat('T_END');
 		$node = new StructDecl($name, $params);
 		return $node;
 	}
@@ -597,11 +645,29 @@ class Lexer {
 		while ($this->current_token['token'] != 'T_RPAREN') {
 			array_push($function_params, $this->expression());
 			while ($this->current_token['token'] == 'T_SEPARATE') {
+				$this->eat('T_SEPARATE');
 				array_push($function_params, $this->expression());
 			}
 		}
 		$this->eat('T_RPAREN');
 		$node = new FunctionDo($function_name, $function_params);
+		return $node;
+	}
+
+	public function call_statement() {
+		$this->eat('T_CALL');
+		$function_name = $this->variable();
+		$function_params = array();
+		$this->eat('T_LPAREN');
+		while ($this->current_token['token'] != 'T_RPAREN') {
+			array_push($function_params, $this->expression());
+			while ($this->current_token['token'] == 'T_SEPARATE') {
+				$this->eat('T_SEPARATE');
+				array_push($function_params, $this->expression());
+			}
+		}
+		$this->eat('T_RPAREN');
+		$node = new CallDo($function_name, $function_params);
 		return $node;
 	}
 
@@ -638,24 +704,24 @@ class Lexer {
 		$relop_val = $this->relation_op();
 		$this->eat('T_THEN');
 		$then = array($this->statement());
-		while ($this->current_token['token'] != 'T_END_IF') {
+		while ($this->current_token['token'] != 'T_END') {
 			while ($this->current_token['token'] == 'T_SEPARATE') {
 				$this->eat('T_SEPARATE');
 				array_push($then, $this->statement());
 			}
 		}
-		$this->eat('T_END_IF');
+		$this->eat('T_END');
 		$else = array();
 		if ($this->current_token['token'] == 'T_ELSE') {
 			$this->eat('T_ELSE');
-			while ($this->current_token['token'] != 'T_END_ELSE') {
+			while ($this->current_token['token'] != 'T_END') {
 				array_push($else, $this->statement());
 				while ($this->current_token['token'] == 'T_SEPARATE') {
 					$this->eat('T_SEPARATE');
 					array_push($else, $this->statement());
 				}
 			}
-			$this->eat('T_END_ELSE');
+			$this->eat('T_END');
 		}
 		$node = new IfStatement($relop_val, $then, $else);
 		return $node;
@@ -665,13 +731,13 @@ class Lexer {
 		$this->eat('T_UNLESS');
 		$relop_val = $this->relation_op();
 		$then = array($this->statement());
-		while ($this->current_token['token'] != 'T_END_UNLESS') {
+		while ($this->current_token['token'] != 'T_END') {
 			while ($this->current_token['token'] == 'T_SEPARATE') {
 				$this->eat('T_SEPARATE');
 				array_push($then, $this->statement());
 			}
 		}
-		$this->eat('T_END_UNLESS');
+		$this->eat('T_END');
 		$node = new UnlessStatement($relop_val, $then);
 		return $node;
 	}
@@ -685,13 +751,13 @@ class Lexer {
 		$this->eat('T_SEPARATE');
 		$operative_assignment = $this->assignment();
 		$then = array($this->statement());
-		while ($this->current_token['token'] != 'T_END_FOR') {
+		while ($this->current_token['token'] != 'T_END') {
 			while ($this->current_token['token'] == 'T_SEPARATE') {
 				$this->eat('T_SEPARATE');
 				array_push($then, $this->statement());
 			}
 		}
-		$this->eat('T_END_FOR');		
+		$this->eat('T_END');		
 		$node = new ForStatement($assignment, $relop_val, $operative_assignment, $then);
 		return $node;
 	}
@@ -700,14 +766,14 @@ class Lexer {
 		$this->eat('T_WHILE');
 		$relop_val = $this->relation_op();
 		$then = array();
-		while ($this->current_token['token'] != 'T_END_WHILE') {
+		while ($this->current_token['token'] != 'T_END') {
 			array_push($then, $this->statement());
 			while ($this->current_token['token'] == 'T_SEPARATE') {
 				$this->eat('T_SEPARATE');
 				array_push($then, $this->statement());
 			}
 		}
-		$this->eat('T_END_WHILE');
+		$this->eat('T_END');
 		$node = new WhileStatement($relop_val, $then);
 		return $node;
 	}
@@ -716,13 +782,13 @@ class Lexer {
 		$this->eat('T_UNTIL');
 		$relop_val = $this->relation_op();
 		$then = array($this->statement());
-		while ($this->current_token['token'] != 'T_END_UNTIL') {
+		while ($this->current_token['token'] != 'T_END') {
 			while ($this->current_token['token'] == 'T_SEPARATE') {
 				$this->eat('T_SEPARATE');
 				array_push($then, $this->statement());
 			}
 		}
-		$this->eat('T_END_UNTIL');		
+		$this->eat('T_END');		
 		$node = new UntilStatement($relop_val, $then);
 		return $node;
 	}
@@ -731,6 +797,13 @@ class Lexer {
 		$this->eat('T_IMPORT');
 		$file_to_open = $this->variable();
 		$node = new ImportStatement($file_to_open);
+		return $node;
+	}
+
+	public function include_statement() {
+		$this->eat('T_INCLUDE');
+		$file_to_open = $this->variable();
+		$node = new IncludeStatement($file_to_open);
 		return $node;
 	}
 
@@ -811,10 +884,12 @@ class Lexer {
 			$this->eat('T_NOT');
 			return new UnaryOp($token['token'], $this->factor());
 		}
+
 		if ($token['token'] == 'T_FLOAT') {
 			$this->eat('T_FLOAT');
 			return new Num($token);
 		}
+
 		if ($token['token'] == 'T_STRING') {
 			$this->eat('T_STRING');
 			return new Text($token);
@@ -830,15 +905,18 @@ class Lexer {
 			return $node;
 		}
 
+		if ($token['token'] == 'T_CALL') {
+			$node = $this->call_statement();
+			return $node;
+		}
+
 		elseif ($token['token'] == 'T_LPAREN') {
 			$this->eat('T_LPAREN');
 			$result = $this->expression();
 			$this->eat('T_RPAREN');
 			return $result;
 		}
-		elseif ($token['token'] == 'T_DO') {
-			$this->eat('T_DO');
-		}
+
 		else {
 			$node = $this->variable();
 			return $node;
@@ -892,7 +970,9 @@ class Lexer {
 		}
 		else {
 			$token_found = $this->current_token['token'];
-			throw new Exception("Couldn't find $token_type found $token_found instead.", 1);
+			$token_phrase = $this->current_token['match'];
+			$token_loc = $this->position;
+			throw new Exception("Couldn't find $token_type found $token_found instead near the $token_loc token.", 1);
 		}
 	}
 }
@@ -969,6 +1049,9 @@ class Interpreter {
 		elseif ($node instanceof FunctionDo) {
 			return $this->visit_function_do($node);
 		}
+		elseif ($node instanceof CallDo) {
+			return $this->visit_call_do($node);
+		}
 		elseif ($node instanceof ReturnStatement) {
 			return $this->visit_return_statement($node);
 		}
@@ -983,6 +1066,9 @@ class Interpreter {
 		}
 		elseif ($node instanceof ImportStatement) {
 			return $this->visit_import($node);
+		}
+		elseif ($node instanceof IncludeStatement) {
+			return $this->visit_include($node);
 		}
 		elseif ($node instanceof NoOp) {
 
@@ -1191,6 +1277,14 @@ class Interpreter {
 		return $return_value;
 	}
 
+	public function visit_call_do($node) {
+		$values_to_pass = array();
+		for ($i=0; $i < sizeof($node->param_values); $i++) { 
+			array_push($values_to_pass, $this->visit($node->param_values[$i]));
+		}
+		return call_user_func_array($node->name->token['match'], $values_to_pass);
+	}
+
 	public function visit_return_statement($node) {
 		$x = $this->visit($node->return_value);
 		return new ReturnObject($x);
@@ -1253,8 +1347,15 @@ class Interpreter {
 		return null;
 	}
 
+	public function visit_include($node) {
+		$name = $node->file_name->token['match'] . ".php";
+		include $name;
+		return null;
+	}
+
 	public function interpret($code) {
 		$tree = $this->lexer->run($code);
+		print_r($tree);
 		$result = $this->visit($tree);
 	}
 }

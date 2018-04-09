@@ -1355,7 +1355,6 @@ class Interpreter {
 
 	public function interpret($code) {
 		$tree = $this->lexer->run($code);
-		print_r($tree);
 		$result = $this->visit($tree);
 	}
 }

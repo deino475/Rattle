@@ -335,7 +335,9 @@ class Lexer {
 		'equals' => 'T_EQUALS',
 		'while' => 'T_WHILE',
 		'until' => 'T_UNTIL',
-		'unless' => 'T_UNLESS'
+		'unless' => 'T_UNLESS',
+		'greater' => 'T_GREATER',
+		'lesser' => 'T_LESS'
 	);
 	public function run($source_code) {
 		$tokens = array();

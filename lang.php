@@ -3,83 +3,68 @@
 Lexer/Paser/Interpreter for the Rattle Programming Language
 Developed By Nile Dixon
 Version 0.2
-
 **/
-
 ############################################
 #   Abstract Syntax Tree Nodes             #
 #                                          #
 #                                          #
 ############################################
 class AST {}
-
 class Compound extends AST {
 	public $children = array();
 	public function __construct($children = array()) {
 		$this->children = $children;
 	}
 }
-
 class Assign extends AST {
 	public $left;
 	public $token;
 	public $right;
-
 	public function __construct($left, $token, $right) {
 		$this->left = $left;
 		$this->token = $token;
 		$this->right = $right;
 	}
 }
-
 class IfStatement extends AST {
 	public $relation;
 	public $then;
 	public $else;
-
 	public function __construct($relation, $then, $else) {
 		$this->relation = $relation;
 		$this->then = $then;
 		$this->else = $else;
 	}
 }
-
 class UnlessStatement extends AST {
 	public $relation;
 	public $then;
-
 	public function __construct($relation, $then) {
 		$this->relation = $relation;
 		$this->then = $then;
 	}
 }
-
 class WhileStatement extends AST {
 	public $relation;
 	public $then = array();
-
 	public function __construct($relation, $then) {
 		$this->relation = $relation;
 		$this->then = $then;
 	}
 }
-
 class UntilStatement extends AST {
 	public $relation;
 	public $then;
-
 	public function __construct($relation, $then) {
 		$this->relation = $relation;
 		$this->then = $then;
 	}
 }
-
 class ForStatement extends AST {
 	public $assignment;
 	public $condition;
 	public $operative_assignment;
 	public $then; 
-
 	public function __construct($assignment, $condition, $operative_assignment, $then) {
 		$this->assignment = $assignment;
 		$this->condition = $condition;
@@ -87,198 +72,158 @@ class ForStatement extends AST {
 		$this->then = $then;
 	}
 }
-
 class ForEachStatement extends AST {
-
 }
-
 class ReturnStatement extends AST {
 	public $return_value;
 	public function __construct($return_value) {
 		$this->return_value = $return_value;
 	}
 }
-
 class SayNode extends AST {
 	public $thing_to_say;
 	public function __construct($thing_to_say) {
 		$this->thing_to_say = $thing_to_say;
 	}
 }
-
 class BinaryOp extends AST {
 	public $left;
 	public $token;
 	public $right;
 	public $op;
-
 	public function __construct($left, $op, $right) {
 		$this->left = $left;
 		$this->op = $op;
 		$this->right = $right;
 	}
 }
-
-
 class UnaryOp extends AST {
 	public $operation;
 	public $expression; 
-
 	public function __construct($operation, $expression) {
 		$this->operation = $operation;
 		$this->expression = $expression;
 	}
 }
-
 class RelOp extends AST {
 	public $operation;
 	public $left;
 	public $right;
-
 	public function __construct($operation, $left, $right) {
 		$this->operation = $operation;
 		$this->left = $left;
 		$this->right = $right;
 	}
 }
-
 class NoOp extends AST {}
-
 class Num extends AST {
 	public $token;
 	public $value;
-
 	public function __construct($token) {
 		$this->token = $token['token'];
 		$this->value = $token['match'];
 	}
 }
-
 class Text extends AST {
 	public $token;
 	public $value;
-
 	public function __construct($token) {
 		$this->token = $token['token'];
 		$this->value = $token['match'];
 	}
 }
-
 class Boolean extends AST {
 	public $token;
 	public $value;
-
 	public function __construct($token) {
 		$this->token = $token['token'];
 		$this->value = $token['match'];
 	}
 }
-
 class Variable extends AST {
 	public $token;
 	public $value;
-
 	public function __construct($token) {
 		$this->token = $token;
 		$this->value = $token['match'];
 	}
 }
-
 class FunctionDecl extends AST {
 	public $name;
 	public $parameters = array();
 	public $then;
-
 	public function __construct($name, $parameters, $then) {
 		$this->name = $name;
 		$this->parameters = $parameters;
 		$this->then = $then;
 	}
 }
-
 class StructDecl extends AST {
 	public $name;
 	public $parameters = array();
-
 	public function __construct($name, $parameters) {
 		$this->name = $name;
 		$this->parameters = $parameters;
 	}
 } 
-
 class FunctionDo extends AST {
 	public $name;
 	public $param_values = array();
-
 	public function __construct($name, $param_values) {
 		$this->name = $name;
 		$this->param_values = $param_values;
 	}
 }
-
 class CallDo extends AST {
 	public $name;
 	public $param_values = array();
-
 	public function __construct($name, $param_values) {
 		$this->name = $name;
 		$this->param_values = $param_values;
 	}
 }
-
 class MakeStatement extends AST {
 	public $struct_name;
 	public $params;
 	public $struct_type;
-
 	public function __construct($name,$params,$type) {
 		$this->struct_name = $name;
 		$this->params = $params;
 		$this->struct_type = $type;
 	}
 }
-
 class GetStatement extends AST {
 	public $name;
 	public $value_to_fetch;
-
 	public function __construct($name,$value_to_fetch) {
 		$this->name = $name;
 		$this->value_to_fetch = $value_to_fetch;
 	}
 }
-
 class SetStatement extends AST {
 	public $param_name;
 	public $struct_name;
 	public $value;
-
 	public function __construct($param_name, $struct_name, $value) {
 		$this->param_name = $param_name;
 		$this->struct_name = $struct_name;
 		$this->value = $value;
 	}
 }
-
 class ImportStatement extends AST {
 	public $file_name;
-
 	public function __construct($file_to_open){
 		$this->file_name = $file_to_open;
 	}
 }
-
 class IncludeStatement extends AST {
 	public $file_name;
-
 	public function __construct($file_to_include) {
 		$this->file_name = $file_to_include;
 	}
 }
-
 class ListDecl extends AST {
 	public $params = array();
-
 	public function __construct($params) {
 		$this->params = $params;
 	}
@@ -288,47 +233,38 @@ class ListDecl extends AST {
 #                                          #
 #                                          #
 ############################################
-
 class BasicStruct {
 	public $type;
 	public $values = array();
-
 	public function __construct($type, $values) {
 		$this->type = $type;
 		$this->values = $values;
 	}
 }
-
 class FunctionObject {
 	public $params;
 	public $then;
-
 	public function __construct($params, $then) {
 		$this->params = $params;
 		$this->then = $then;
 	}
 }
-
 class NodeObject {
 	public $value;
 	public $next;
 }
-
 class ListObject {
 	public $head;
 }
-
 class ReturnObject {
 	public $value;
 	public function __construct($ret_val) {
 		$this->value = $ret_val;
 	}
-
 	public function get_value() {
 		return $this->value;
 	}
 }
-
 ############################################
 #   Lexer and Parser                       #
 #                                          #
@@ -355,13 +291,12 @@ class Lexer {
 		'/^>/' => 'T_GREATER',
 		'/^</' => 'T_LESS',
 		'/^=/' => 'T_EQUALS',
-		'/^{{(.*?)}}/s' => 'T_STRING',	
+		"/^''(.*?)''/s" => 'T_STRING',	
 		'/^[+-]?([0-9]*[.])?[0-9]+/' => 'T_FLOAT',
 		'/^[a-zA-Z][a-zA-Z0-9_]*/' => 'T_NAME',
 		'/^\s+/' => 'T_WHITESPACE',
 		'/^\n/' => 'T_NEWLINE'
 	);
-
 	public $reserved_words = array(
 		'plus' => 'T_PLUS',
 		'minus' => 'T_MINUS',
@@ -396,9 +331,12 @@ class Lexer {
 		'from' => 'T_FROM',
 		'set' => 'T_SET',
 		'to' => 'T_TO',
-		'call' => 'T_CALL'
+		'call' => 'T_CALL',
+		'equals' => 'T_EQUALS',
+		'while' => 'T_WHILE',
+		'until' => 'T_UNTIL',
+		'unless' => 'T_UNLESS'
 	);
-
 	public function run($source_code) {
 		$tokens = array();
 		$offset = 0;
@@ -416,9 +354,9 @@ class Lexer {
 			}	
 		}
 		$this->tokens = $tokens;
+		print_r($this->tokens);
 		return $this->program();
 	}
-
 	public function match_reserved($result) {
 		if (array_key_exists($result['match'], $this->reserved_words)) {
 			return array(
@@ -428,7 +366,6 @@ class Lexer {
 		}
 		return $result;
 	}
-
 	public function match($line, $offset) {
 		$current_str = substr($line, $offset);
 		foreach ($this->terminals as $pattern => $token) {
@@ -441,7 +378,6 @@ class Lexer {
 		}
 		throw new Exception("Could not parse the following code: $current_str", 1);
 	}
-
 	public function advance() {
 		if ($this->position >= sizeof($this->tokens)) {
 			$this->current_token = null;
@@ -453,13 +389,11 @@ class Lexer {
 			}	
 		}
 	}
-
 	public function program() {
 		$this->current_token = $this->tokens[$this->position];
 		$node = $this->compound_statement();
 		return $node;
 	}
-
 	public function compound_statement() {
 		$nodes = $this->statement_lists();
 		$root = new Compound;
@@ -468,23 +402,19 @@ class Lexer {
 		}
 		return $root;
 	}
-
 	public function statement_lists() {
 		$node = $this->statement();
 		$results = array();
 		array_push($results, $node);
-
 		while ($this->current_token['token'] == 'T_END') {
 			$this->eat('T_END');
 			array_push($results, $this->statement());
 		}
-
 		if ($this->current_token['token'] == 'T_NAME') {
 			throw new Exception("Why is an ID here?", 1);
 		}
 		return $results;
 	}
-
 	public function relation_op() {
 		$part_one = $this->expression();
 		if ($this->current_token['token'] == 'T_EQUALS') {
@@ -515,7 +445,6 @@ class Lexer {
 		$relop_val = new RelOp($operation, $part_one, $part_two);
 		return $relop_val;
 	}
-
 	public function statement() {
 		if ($this->current_token['token'] == 'T_NAME') {
 			$node = $this->assignment();
@@ -570,7 +499,6 @@ class Lexer {
 		}
 		return $node;
 	}
-
 	public function assignment() {
 		$left = $this->variable();
 		$token = $this->current_token['token'];
@@ -579,7 +507,6 @@ class Lexer {
 		$node = new Assign($left, $token, $right);
 		return $node;
 	}
-
 	public function struct_decl() {
 		$this->eat('T_STRUCT');
 		$name = $this->variable();
@@ -595,7 +522,6 @@ class Lexer {
 		$node = new StructDecl($name, $params);
 		return $node;
 	}
-
 	public function function_statement() {
 		$this->eat('T_FUNC');
 		$name = $this->variable();
@@ -621,7 +547,6 @@ class Lexer {
 		$node = new FunctionDecl($name, $parameters, $compound);
 		return $node;
 	}
-
 	public function struct_statement() {
 		$this->eat('T_STRUCT');
 		$name = $this->variable();
@@ -636,7 +561,6 @@ class Lexer {
 		$node = new StructDecl($name, $params);
 		return $node;
 	}
-
 	public function do_statement() {
 		$this->eat('T_DO');
 		$function_name = $this->variable();
@@ -653,7 +577,6 @@ class Lexer {
 		$node = new FunctionDo($function_name, $function_params);
 		return $node;
 	}
-
 	public function call_statement() {
 		$this->eat('T_CALL');
 		$function_name = $this->variable();
@@ -670,7 +593,6 @@ class Lexer {
 		$node = new CallDo($function_name, $function_params);
 		return $node;
 	}
-
 	public function make_statement() {
 		$this->eat('T_MAKE');
 		$struct_name = $this->variable();
@@ -689,7 +611,6 @@ class Lexer {
 		$node = new MakeStatement($struct_name, $params, $variable_name);
 		return $node;
 	}
-
 	public function set_statement() {
 		$this->eat('T_SET');
 		$variable = $this->variable();
@@ -698,7 +619,6 @@ class Lexer {
 		$node = new SetStatement($variable->value_to_fetch, $variable->name, $value);
 		return $node;
 	}
-
 	public function if_statement() {
 		$this->eat('T_IF');
 		$relop_val = $this->relation_op();
@@ -726,7 +646,6 @@ class Lexer {
 		$node = new IfStatement($relop_val, $then, $else);
 		return $node;
 	}
-
 	public function unless_statement() {
 		$this->eat('T_UNLESS');
 		$relop_val = $this->relation_op();
@@ -741,7 +660,6 @@ class Lexer {
 		$node = new UnlessStatement($relop_val, $then);
 		return $node;
 	}
-
 	public function for_statement() {
 		$this->eat('T_FOR');
 		$assignment = $this->assignment();
@@ -761,7 +679,6 @@ class Lexer {
 		$node = new ForStatement($assignment, $relop_val, $operative_assignment, $then);
 		return $node;
 	}
-
 	public function while_statement() {
 		$this->eat('T_WHILE');
 		$relop_val = $this->relation_op();
@@ -777,7 +694,6 @@ class Lexer {
 		$node = new WhileStatement($relop_val, $then);
 		return $node;
 	}
-
 	public function until_statement() {
 		$this->eat('T_UNTIL');
 		$relop_val = $this->relation_op();
@@ -792,21 +708,18 @@ class Lexer {
 		$node = new UntilStatement($relop_val, $then);
 		return $node;
 	}
-
 	public function import_statement() {
 		$this->eat('T_IMPORT');
 		$file_to_open = $this->variable();
 		$node = new ImportStatement($file_to_open);
 		return $node;
 	}
-
 	public function include_statement() {
 		$this->eat('T_INCLUDE');
 		$file_to_open = $this->variable();
 		$node = new IncludeStatement($file_to_open);
 		return $node;
 	}
-
 	public function return_statement() {
 		$this->eat('T_RETURN');
 		$part_one = $this->expression();
@@ -843,14 +756,12 @@ class Lexer {
 		$node = new ReturnStatement($relop_val);
 		return $node;
 	}
-
 	public function say() {
 		$this->eat('T_ECHO');
 		$thing_to_say = $this->expression();
 		$node = new SayNode($thing_to_say);
 		return $node;
 	}
-
 	public function variable() {
 		$value = $this->current_token;
 		$this->eat('T_NAME');
@@ -865,11 +776,9 @@ class Lexer {
 		$node = new Variable($value);
 		return $node;
 	}
-
 	public function empty() {
 		return new NoOp;
 	}
-
 	public function factor() {
 		$token = $this->current_token;
 		if ($token['token'] == 'T_PLUS') {
@@ -884,45 +793,37 @@ class Lexer {
 			$this->eat('T_NOT');
 			return new UnaryOp($token['token'], $this->factor());
 		}
-
 		if ($token['token'] == 'T_FLOAT') {
 			$this->eat('T_FLOAT');
 			return new Num($token);
 		}
-
 		if ($token['token'] == 'T_STRING') {
 			$this->eat('T_STRING');
 			return new Text($token);
 		}
-
 		if ($token['token'] == 'T_BOOL') {
 			$this->eat('T_BOOL');
 			return new Boolean($token);
 		}
-
 		if ($token['token'] == 'T_DO') {
 			$node = $this->do_statement();
 			return $node;
 		}
-
 		if ($token['token'] == 'T_CALL') {
 			$node = $this->call_statement();
 			return $node;
 		}
-
 		elseif ($token['token'] == 'T_LPAREN') {
 			$this->eat('T_LPAREN');
 			$result = $this->expression();
 			$this->eat('T_RPAREN');
 			return $result;
 		}
-
 		else {
 			$node = $this->variable();
 			return $node;
 		}		
 	}
-
 	public function term() {
 		$result = $this->factor();
 		while (in_array($this->current_token['token'], array('T_MULTIPLY','T_DIVIDE','T_MODULUS'))) {
@@ -940,7 +841,6 @@ class Lexer {
 		}
 		return $result;
 	}
-
 	public function expression() {
 		$result = $this->term();
 		while (in_array($this->current_token['token'], array('T_PLUS','T_MINUS','T_CONCAT')) ){
@@ -962,7 +862,6 @@ class Lexer {
 		}
 		return $result;
 	}
-
 	public function eat($token_type) {
 		if ($this->current_token['token'] == $token_type) {
 			$token_match = $this->current_token['match'];
@@ -976,24 +875,20 @@ class Lexer {
 		}
 	}
 }
-
 ############################################
 #   Interpreter                            #
 #                                          #
 #                                          #
 ############################################
-
 class Interpreter {
 	public $lexer;
 	public $current_stack = 0;
 	public $var_space = array(array());
 	public $function_space = array();
 	public $struct_space = array();
-
 	public function __construct() {
 		$this->lexer = new Lexer;
 	}
-
 	public function visit($node) {
 		if ($node instanceof Compound) {
 			return $this->visit_compound($node);
@@ -1071,10 +966,8 @@ class Interpreter {
 			return $this->visit_include($node);
 		}
 		elseif ($node instanceof NoOp) {
-
 		}
 	}
-
 	public function visit_binaryop($node) {
 		if ($node->op['token'] == 'T_PLUS') {
 			return $this->visit($node->left) + $this->visit($node->right);
@@ -1096,7 +989,6 @@ class Interpreter {
 		}
 		return null;
 	}
-
 	public function visit_unaryop($node) {
 		if ($node->operation == 'T_PLUS') {
 			return + $this->visit($node->expression);
@@ -1109,7 +1001,6 @@ class Interpreter {
 		}
 		return null;
 	}
-
 	public function visit_relop($node) {
 		switch ($node->operation) {
 			case 'T_EQUALS':
@@ -1135,7 +1026,6 @@ class Interpreter {
 		}
 		return null;
 	}
-
 	public function visit_cond($node) {
 		$result = null;
 		if ($this->visit($node->relation) == True) {
@@ -1156,7 +1046,6 @@ class Interpreter {
 		}
 		return $result;
 	}
-
 	public function visit_unless($node) {
 		$result = null;
 		if ($this->visit($node->relation) == False) {
@@ -1169,7 +1058,6 @@ class Interpreter {
 		}
 		return $result;
 	}
-
 	public function visit_for($node) {
 		$result = null;
 		$this->visit($node->assignment);
@@ -1184,7 +1072,6 @@ class Interpreter {
 		}
 		return $result;
 	}
-
 	public function visit_while($node) {
 		$result = null;
 		while ($this->visit($node->relation) == True) {
@@ -1197,7 +1084,6 @@ class Interpreter {
 		}
 		return $result;
 	}
-
 	public function visit_until($node) {
 		$result = null;
 		while ($this->visit($node->relation) == False) {
@@ -1210,11 +1096,9 @@ class Interpreter {
 		}
 		return null;
 	}
-
 	public function visit_num($node) {
 		return $node->value;
 	}
-
 	public function visit_compound($node) {
 		$result = null;
 		foreach ($node->children as $child) {
@@ -1225,15 +1109,12 @@ class Interpreter {
 		}
 		return $result;
 	}
-
 	public function visit_noop($node) {}
-
 	public function visit_assign($node) {
 		$var_name = $node->left->value;
 		$this->var_space[$this->current_stack][$var_name] = $this->visit($node->right);
 		return null;
 	}
-
 	public function visit_function_decl($node) {
 		$function_name = $node->name;
 		$function_params = $node->parameters;
@@ -1241,14 +1122,12 @@ class Interpreter {
 		$this->function_space[$function_name->value] = new FunctionObject($function_params,$function_do);
 		return null;
 	}
-
 	public function visit_struct_decl($node) {
 		$struct_name = $node->name;
 		$params = $node->parameters;
 		$this->struct_space[$struct_name->value] = $params;
 		return null;
 	}
-
 	public function visit_make_struct($node) {
 		$return_value = null;
 		$struct_params = $this->struct_space[$node->struct_name->value];
@@ -1260,7 +1139,6 @@ class Interpreter {
 		$this->var_space[$this->current_stack][$node->struct_type->value] = new BasicStruct($node->struct_name->value, $assoc_array);
 		return $return_value;
 	}
-
 	public function visit_function_do($node) {
 		$return_value = null;
 		$function_info = $this->function_space[$node->name->value];
@@ -1276,7 +1154,6 @@ class Interpreter {
 		array_pop($this->var_space);
 		return $return_value;
 	}
-
 	public function visit_call_do($node) {
 		$values_to_pass = array();
 		for ($i=0; $i < sizeof($node->param_values); $i++) { 
@@ -1284,12 +1161,10 @@ class Interpreter {
 		}
 		return call_user_func_array($node->name->token['match'], $values_to_pass);
 	}
-
 	public function visit_return_statement($node) {
 		$x = $this->visit($node->return_value);
 		return new ReturnObject($x);
 	}
-
 	public function visit_variable($node) {
 		for ($i = sizeof($this->var_space) - 1; $i >= 0 ; $i--) { 
 			if (isset($this->var_space[$i][$node->value])) {
@@ -1298,7 +1173,6 @@ class Interpreter {
 		}
 		throw new Exception("Name does not exist.", 1);
 	}
-
 	public function visit_get_statement($node) {
 		for ($i = sizeof($this->var_space) - 1; $i >= 0; $i--) { 
 			if (isset($this->var_space[$i][$node->name])) {
@@ -1307,7 +1181,6 @@ class Interpreter {
 		}
 		throw new Exception("This struct does not exist.", 1);
 	}
-
 	public function visit_set_statement($node) {
 		for ($i = sizeof($this->var_space) - 1; $i >= 0; $i--)  {
 			if (isset($this->var_space[$i][$node->struct_name])) {
@@ -1317,27 +1190,22 @@ class Interpreter {
 			}
 		}
 	}
-
 	public function visit_say($node) {
 		echo $this->visit($node->thing_to_say);
 		return null;
 	}
-
 	public function visit_text($node) {
 		return substr($node->value,2,-2);
 	}
-
 	public function visit_boolean($node) {
 		if ($node->value = 'true') {
 			return True;
 		}
 		return False;
 	}
-
 	public function visit_null($node) {
 		return null;
 	}
-
 	public function visit_import($node) {
 		$import_interpreter = new Lexer;
 		$name = $node->file_name->token['match']  . ".rattle";
@@ -1346,13 +1214,11 @@ class Interpreter {
 		$this_result = $this->visit($this_tree);
 		return null;
 	}
-
 	public function visit_include($node) {
 		$name = $node->file_name->token['match'] . ".php";
 		include $name;
 		return null;
 	}
-
 	public function interpret($code) {
 		$tree = $this->lexer->run($code);
 		$result = $this->visit($tree);

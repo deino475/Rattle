@@ -356,7 +356,6 @@ class Lexer {
 			}	
 		}
 		$this->tokens = $tokens;
-		print_r($this->tokens);
 		return $this->program();
 	}
 	public function match_reserved($result) {
